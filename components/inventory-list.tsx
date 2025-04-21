@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Filter, Package, X } from "lucide-react"
+import { Filter, Package, X, Edit, Plus, Trash2 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -21,6 +21,16 @@ import {
 } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import type React from 'react';
 
 // Mock inventory data
 const inventoryData = [
@@ -35,115 +45,7 @@ const inventoryData = [
     quantity: 24,
     lastUpdated: "2025-04-18 10:15:00",
     status: "In Stock",
-  },
-  {
-    id: "INV002",
-    name: "Office Chair",
-    category: "Furniture",
-    supplierName: "Comfort Furnishings",
-    supplierId: "SUP002",
-    cost: 149.99,
-    price: 179.99,
-    quantity: 3,
-    lastUpdated: "2025-04-17 14:42:00",
-    status: "In Stock",
-  },
-  {
-    id: "INV003",
-    name: "Smartphone",
-    category: "Electronics",
-    supplierName: "TechGear Inc.",
-    supplierId: "SUP001",
-    cost: 599.99,
-    price: 719.99,
-    quantity: 8,
-    lastUpdated: "2025-04-16 09:30:00",
-    status: "In Stock",
-  },
-  {
-    id: "INV004",
-    name: "Cotton T-Shirt",
-    category: "Clothing",
-    supplierName: "Fashion Forward",
-    supplierId: "SUP003",
-    cost: 19.99,
-    price: 24.99,
-    quantity: 45,
-    lastUpdated: "2025-04-15 13:00:00",
-    status: "In Stock",
-  },
-  {
-    id: "INV005",
-    name: "Desk Lamp",
-    category: "Furniture",
-    supplierName: "Comfort Furnishings",
-    supplierId: "SUP002",
-    cost: 34.99,
-    price: 44.99,
-    quantity: 18,
-    lastUpdated: "2025-04-14 08:10:00",
-    status: "In Stock",
-  },
-  {
-    id: "INV006",
-    name: "Bluetooth Speaker",
-    category: "Electronics",
-    supplierName: "SoundWave Audio",
-    supplierId: "SUP004",
-    cost: 79.99,
-    price: 99.99,
-    quantity: 0,
-    lastUpdated: "2025-04-13 11:45:00",
-    status: "Out of Stock",
-  },
-  {
-    id: "INV007",
-    name: "Denim Jeans",
-    category: "Clothing",
-    supplierName: "Fashion Forward",
-    supplierId: "SUP003",
-    cost: 49.99,
-    price: 64.99,
-    quantity: 32,
-    lastUpdated: "2025-04-12 17:20:00",
-    status: "In Stock",
-  },
-  {
-    id: "INV008",
-    name: "Coffee Maker",
-    category: "Kitchen",
-    supplierName: "HomeEssentials",
-    supplierId: "SUP005",
-    cost: 129.99,
-    price: 159.99,
-    quantity: 5,
-    lastUpdated: "2025-04-11 10:00:00",
-    status: "Low Stock",
-  },
-  {
-    id: "INV009",
-    name: "Bestselling Novel",
-    category: "Books",
-    supplierName: "ReadMore Publishing",
-    supplierId: "SUP006",
-    cost: 24.99,
-    price: 29.99,
-    quantity: 22,
-    lastUpdated: "2025-04-10 15:55:00",
-    status: "In Stock",
-  },
-  {
-    id: "INV010",
-    name: "Stainless Steel Cookware Set",
-    category: "Kitchen",
-    supplierName: "HomeEssentials",
-    supplierId: "SUP005",
-    cost: 199.99,
-    price: 249.99,
-    quantity: 3,
-    lastUpdated: "2025-04-09 12:25:00",
-    status: "Low Stock",
-  },
+  }
 ];
 
 
@@ -154,16 +56,44 @@ export function InventoryList() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [selectedStatus, setSelectedStatus] = useState<string>("")
   const [activeFilters, setActiveFilters] = useState<string[]>([])
+  const [editItem, setEditItem] = useState<(typeof inventoryData)[0] | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null)
+  const [newItem, setNewItem] = useState<Omit<(typeof inventoryData)[0], "id" | "lastUpdated" | "status">>({
+    name: "",
+    category: "",
+    supplierName: "",
+    supplierId: "",
+    cost: 0,
+    price: 0,
+    quantity: 0,
+  })
+
+
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch("http://localhost:3333/inventory/jira")
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      const data = await response.json()
+      if (data) {
+        setInventory(data)
+      } else {
+        console.error("Received null or undefined data from the API")
+      }
+    } catch (error) {
+      console.error("Failed to fetch inventory data:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Simulate API call to fetch inventory data
   useEffect(() => {
-    const fetchData = async () => {
-      // Simulate network delay
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      setInventory(inventoryData)
-      setLoading(false)
-    }
-
     fetchData()
   }, [])
 
@@ -221,6 +151,121 @@ export function InventoryList() {
       setSelectedStatus("")
     }
   }
+
+  const handleCreateItem = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+
+    // Create the new item with today's date
+    const createdItem = {
+      ...newItem,
+    }
+
+    console.log('name ', createdItem.name) 
+
+    // call the API to create the new item
+    fetch("http://localhost:3333/inventory/jira/create", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(createdItem),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        return response.json()
+      })
+      .then(() => {
+        fetchData() 
+        setCreateDialogOpen(false)
+        setNewItem({
+          name: "",
+          category: "",
+          price: 0,
+          quantity: 0,
+          supplierName: "",
+          supplierId: "",
+          cost: 0,
+        })
+      })
+      .catch((error) => {
+        console.error("Failed to create inventory item:", error)
+      })
+  }
+
+  const handleSaveEdit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault(); // Prevent default form submission behavior.
+
+    if (!editItem) return; // Exit if no item is being edited.
+
+    try {
+        // Prepare the payload for the API request.
+        const payload = {
+            fields: {
+                issueId: editItem.id, // Use the item's ID as the issue ID.
+                name: editItem.name,
+                supplierName: editItem.supplierName,
+                supplierId: editItem.supplierId,
+                cost: editItem.cost,
+                price: editItem.price,
+                quantity: editItem.quantity,
+                // lastUpdated: new Date().toISOString(), // Use the current timestamp.
+                category: editItem.category,
+            },
+        };
+
+        // Send a PUT request to the backend.
+        const response = await fetch("http://localhost:3333/inventory/jira/edit", {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to update inventory item: ${response.statusText}`);
+        }
+        await fetchData(); // Refetch the inventory data after successful update.
+        
+    } catch (error) {
+        console.error("Error updating inventory item:", error);
+    } finally {
+        setDialogOpen(false); // Close the edit dialog.
+        setEditItem(null); // Reset the `editItem` state to null.
+    }
+};
+
+  const confirmDelete = (itemId: string) => {
+    setItemToDelete(itemId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirmed = async () => {
+    if (!itemToDelete) return;
+
+    try {
+      console.log('itemId: ', itemToDelete);
+      const response = await fetch(`http://localhost:3333/inventory/jira/delete`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ "issueId": itemToDelete })
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const updatedInventory = inventory.filter((item) => item.id !== itemToDelete);
+      setInventory(updatedInventory);
+    } catch (error) {
+      console.error("Failed to delete inventory item:", error);
+    } finally {
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -295,6 +340,10 @@ export function InventoryList() {
             </SheetContent>
           </Sheet>
         </div>
+        <Button onClick={() => setCreateDialogOpen(true)} className="shrink-0">
+          <Plus className="h-4 w-4 mr-2" />
+          Create
+        </Button>
       </div>
 
       {/* Active filters */}
@@ -339,12 +388,13 @@ export function InventoryList() {
                 <TableHead className="text-right">Quantity</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Last Updated</TableHead>
+                <TableHead className="w-[80px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredInventory.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
+                  <TableCell colSpan={8} className="text-center py-8">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Package className="h-8 w-8 text-muted-foreground" />
                       <p className="text-muted-foreground">No inventory items found</p>
@@ -363,17 +413,6 @@ export function InventoryList() {
                     <TableCell className="text-right">${item.price.toFixed(2)}</TableCell>
                     <TableCell className="text-right">{item.quantity}</TableCell>
                     <TableCell>
-                      {/* <Badge
-                        variant={
-                          item.status === "In Stock"
-                            ? "success"
-                            : item.status === "Low Stock"
-                              ? "warning"
-                              : "destructive"
-                        }
-                      >
-                        {item.status}
-                      </Badge> */}
                       <Badge
                         variant={
                           item.status === "In Stock"
@@ -387,6 +426,27 @@ export function InventoryList() {
                       </Badge>
                     </TableCell>
                     <TableCell>{item.lastUpdated}</TableCell>
+                    <TableCell className="flex space-between content-center">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setEditItem(item)
+                          setDialogOpen(true)
+                        }}
+                      >
+                        <Edit className="h-4 w-4" />
+                        <span className="sr-only">Edit {item.name}</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => confirmDelete(item.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Delete {item.name}</span>
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -394,6 +454,303 @@ export function InventoryList() {
           </Table>
         )}
       </Card>
+      
+      {/* Edit Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Inventory Item</DialogTitle>
+            <DialogDescription>Make changes to the inventory item here. Click save when you're done.</DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (
+                !editItem ||
+                !editItem.name ||
+                !editItem.category ||
+                !editItem.supplierName ||
+                !editItem.supplierId ||
+                !editItem.cost ||
+                !editItem.price 
+                // !editItem.quantity
+              ) {
+                alert("Please fill out all fields before saving.");
+                return;
+              }
+              handleSaveEdit(e);
+            }}
+          >
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="item-name" className="text-right">
+                  Name
+                </Label>
+                <Input
+                  id="item-name"
+                  value={editItem?.name || ""}
+                  className="col-span-3"
+                  onChange={(e) => setEditItem(editItem ? { ...editItem, name: e.target.value } : null)}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="item-category" className="text-right">
+                  Category
+                </Label>
+                <Select
+                  value={editItem?.category || ""}
+                  onValueChange={(value) => setEditItem(editItem ? { ...editItem, category: value } : null)}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="item-supplier-name" className="text-right">
+                  Supplier
+                </Label>
+                <Input
+                  id="item-supplier-name"
+                  value={editItem?.supplierName || ""}
+                  className="col-span-3"
+                  onChange={(e) => setEditItem(editItem ? { ...editItem, supplierName: e.target.value } : null)}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="item-supplier-id" className="text-right">
+                  Supplier ID
+                </Label>
+                <Input
+                  id="item-supplier-id"
+                  value={editItem?.supplierId || ""}
+                  className="col-span-3"
+                  onChange={(e) => setEditItem(editItem ? { ...editItem, supplierId: e.target.value } : null)}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="item-cost" className="text-right">
+                  Cost
+                </Label>
+                <Input
+                  id="item-cost"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={editItem?.cost || ""}
+                  className="col-span-3"
+                  onChange={(e) =>
+                    setEditItem(editItem ? { ...editItem, cost: Number.parseFloat(e.target.value) } : null)
+                  }
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="item-price" className="text-right">
+                  Price
+                </Label>
+                <Input
+                  id="item-price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={editItem?.price || ""}
+                  className="col-span-3"
+                  onChange={(e) =>
+                    setEditItem(editItem ? { ...editItem, price: Number.parseFloat(e.target.value) } : null)
+                  }
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="item-quantity" className="text-right">
+                  Quantity
+                </Label>
+                <Input
+                  id="item-quantity"
+                  type="number"
+                  min="0"
+                  value={editItem?.quantity || ""}
+                  className="col-span-3"
+                  onChange={(e) =>
+                    setEditItem(editItem ? { ...editItem, quantity: Number.parseInt(e.target.value) } : null)
+                  }
+                />
+              </div>
+            </div>
+            <DialogFooter className="flex justify-between">
+              <Button
+                variant="destructive"
+                onClick={() => editItem && confirmDelete(editItem.id)}
+              >
+                Delete
+              </Button>
+              <Button type="submit">Save changes</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Dialog */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create Inventory Item</DialogTitle>
+            <DialogDescription>Add a new inventory item. Click save when you're done.</DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              // Error checking for required fields
+              if (
+                !newItem.name ||
+                !newItem.category ||
+                !newItem.supplierName ||
+                !newItem.supplierId ||
+                !newItem.cost ||
+                !newItem.price
+              ) {
+                alert("Please fill out all required fields before creating the item.");
+                return;
+              }
+              handleCreateItem(e);
+            }}
+          >
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="new-item-name" className="text-right">
+                  Name
+                </Label>
+                <Input
+                  id="new-item-name"
+                  value={newItem.name}
+                  className="col-span-3"
+                  onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="new-item-category" className="text-right">
+                  Category
+                </Label>
+                <Select
+                  value={newItem.category}
+                  onValueChange={(value) => setNewItem({ ...newItem, category: value })}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="new-item-supplier-name" className="text-right">
+                  Supplier
+                </Label>
+                <Input
+                  id="new-item-supplier-name"
+                  value={newItem.supplierName}
+                  className="col-span-3"
+                  onChange={(e) => setNewItem({ ...newItem, supplierName: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="new-item-supplier-id" className="text-right">
+                  Supplier ID
+                </Label>
+                <Input
+                  id="new-item-supplier-id"
+                  value={newItem.supplierId}
+                  className="col-span-3"
+                  onChange={(e) => setNewItem({ ...newItem, supplierId: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="new-item-cost" className="text-right">
+                  Cost
+                </Label>
+                <Input
+                  id="new-item-cost"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={newItem.cost}
+                  className="col-span-3"
+                  onChange={(e) => setNewItem({ ...newItem, cost: Number.parseFloat(e.target.value) })}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="new-item-price" className="text-right">
+                  Price
+                </Label>
+                <Input
+                  id="new-item-price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={newItem.price}
+                  className="col-span-3"
+                  onChange={(e) => setNewItem({ ...newItem, price: Number.parseFloat(e.target.value) })}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="new-item-quantity" className="text-right">
+                  Quantity
+                </Label>
+                <Input
+                  id="new-item-quantity"
+                  type="number"
+                  min="0"
+                  value={newItem.quantity}
+                  className="col-span-3"
+                  onChange={(e) => setNewItem({ ...newItem, quantity: Number.parseInt(e.target.value) })}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit">Create item</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+          </DialogHeader>
+          <p>This action is irreversible. Are you sure you want to delete this item?</p>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteConfirmed}>
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
