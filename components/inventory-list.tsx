@@ -37,6 +37,7 @@ const inventoryData = [
   {
     id: "INV001",
     name: "Wireless Headphones",
+    // product code? 
     category: "Electronics",
     supplierName: "TechGear Inc.",
     supplierId: "SUP001",
@@ -45,8 +46,29 @@ const inventoryData = [
     quantity: 24,
     lastUpdated: "2025-04-18 10:15:00",
     status: "In Stock",
+    // min stock level
+    // branch id 
+    //
   }
 ];
+
+/*
+  current database inventory structure:
+  stocks: 
+  id: uuid
+  product_name: text
+  store_id: text
+  category: text
+  quantity: integer
+  ++ cost: decimal
+  unit_price: decimal
+  supplier_name: text
+  ++ supplier_id: uuid
+  minimum_stock_level: integer
+  branch_id: uuid
+  created_at: timestamp
+  updated_at: timestamp
+*/
 
 
 export function InventoryList() {

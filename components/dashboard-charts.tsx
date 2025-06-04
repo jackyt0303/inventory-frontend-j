@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Area,
@@ -16,37 +17,63 @@ import {
   XAxis,
   YAxis,
 } from "@/components/ui/chart"
+import { fetchChartData, type ChartData } from "@/utils/salesApi"
 
 export function DashboardCharts() {
-  // Sales data for the last 7 days
-  const salesData = [
-    { name: "Mon", sales: 4000 },
-    { name: "Tue", sales: 3000 },
-    { name: "Wed", sales: 2000 },
-    { name: "Thu", sales: 2780 },
-    { name: "Fri", sales: 1890 },
-    { name: "Sat", sales: 2390 },
-    { name: "Sun", sales: 3490 },
-  ]
+  const [chartData, setChartData] = useState<ChartData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Inventory data by category
-  const inventoryData = [
-    { name: "Electronics", value: 400 },
-    { name: "Clothing", value: 300 },
-    { name: "Food", value: 200 },
-    { name: "Books", value: 100 },
-    { name: "Other", value: 50 },
-  ]
+  useEffect(() => {
+    const loadChartData = async () => {
+      try {
+        setLoading(true)
+        const data = await fetchChartData()
+        setChartData(data)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load chart data')
+      } finally {
+        setLoading(false)
+      }
+    }
 
-  // Inventory status data
-  const inventoryStatusData = [
-    { name: "In Stock", value: 573 },
-    { name: "Low Stock", value: 124 },
-    { name: "Out of Stock", value: 45 },
-  ]
+    loadChartData()
+  }, [])
 
   const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"]
   const STATUS_COLORS = ["#4CAF50", "#FFC107", "#F44336"]
+
+  if (loading) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2">
+        {[...Array(3)].map((_, i) => (
+          <Card key={i} className={i === 2 ? "md:col-span-2" : ""}>
+            <CardHeader>
+              <div className="h-6 w-32 bg-muted animate-pulse rounded mb-2" />
+              <div className="h-4 w-48 bg-muted animate-pulse rounded" />
+            </CardHeader>
+            <CardContent className="h-80">
+              <div className="h-full w-full bg-muted animate-pulse rounded" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="md:col-span-2">
+          <CardContent className="pt-6">
+            <p className="text-red-500">Error: {error}</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (!chartData) return null
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
@@ -58,7 +85,7 @@ export function DashboardCharts() {
         <CardContent className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
-              data={salesData}
+              data={chartData.salesData}
               margin={{
                 top: 10,
                 right: 30,
@@ -84,16 +111,18 @@ export function DashboardCharts() {
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={inventoryData}
+                //data={chartData.inventoryData}
+                data={[]}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percent }: any) => `${name}: ${(percent * 100).toFixed(0)}%`}
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
               >
-                {inventoryData.map((entry, index) => (
+                {/* {chartData.inventoryData.map((entry: any, index: number) => ( */}
+                {[].map((entry: any, index: number) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
@@ -111,7 +140,8 @@ export function DashboardCharts() {
         <CardContent className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
-              data={inventoryStatusData}
+              //data={chartData.inventoryStatusData}
+              data = {[]}
               margin={{
                 top: 20,
                 right: 30,
@@ -125,7 +155,8 @@ export function DashboardCharts() {
               <Tooltip />
               <Legend />
               <Bar dataKey="value" name="Count">
-                {inventoryStatusData.map((entry, index) => (
+                {/* {chartData.inventoryStatusData.map((entry: any, index: number) => ( */}
+                {[].map((entry: any, index: number) => (
                   <Cell key={`cell-${index}`} fill={STATUS_COLORS[index % STATUS_COLORS.length]} />
                 ))}
               </Bar>
