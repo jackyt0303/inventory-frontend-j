@@ -83,47 +83,21 @@ export function InventoryList() {
   // Get authentication token
   const getAuthToken = async () => {
     try {
-      // Debug environment variables
-      console.log("Environment check:", {
-        hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-        hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-        hasEmail: !!process.env.NEXT_PUBLIC_SUPABASE_USER_EMAIL,
-        hasPassword: !!process.env.NEXT_PUBLIC_SUPABASE_USER_PASSWORD,
-        email: process.env.NEXT_PUBLIC_SUPABASE_USER_EMAIL
-      })
-
-      // Check if we have required environment variables
-      if (!process.env.NEXT_PUBLIC_SUPABASE_USER_EMAIL || !process.env.NEXT_PUBLIC_SUPABASE_USER_PASSWORD) {
-        console.error("Missing environment variables for authentication")
-        throw new Error("Authentication credentials not configured")
-      }
-
       // Sign in with credentials from .env
       const { data: { session }, error } = await supabase.auth.signInWithPassword({
-        email: process.env.NEXT_PUBLIC_SUPABASE_USER_EMAIL,
-        password: process.env.NEXT_PUBLIC_SUPABASE_USER_PASSWORD
+        email: process.env.NEXT_PUBLIC_SUPABASE_USER_EMAIL!,
+        password: process.env.NEXT_PUBLIC_SUPABASE_USER_PASSWORD!
       })
       
       if (error) {
         console.error("Authentication error:", error)
-        console.error("Error details:", {
-          message: error.message,
-          status: error.status,
-          statusCode: error.status
-        })
-        throw error
-      }
-
-      if (!session?.access_token) {
-        console.error("No access token received from authentication")
-        throw new Error("Authentication failed - no access token")
+        return null
       }
       
-      console.log("Authentication successful, token length:", session.access_token.length)
-      return session.access_token
+      return session?.access_token || null
     } catch (error) {
       console.error("Failed to get auth token:", error)
-      throw error
+      return null
     }
   }
 
@@ -218,7 +192,8 @@ export function InventoryList() {
     try {
       const token = await getAuthToken()
       if (!token) {
-        throw new Error("Authentication failed. Please check your credentials.")
+        alert("Authentication failed. Please check your credentials.")
+        return
       }
 
       const response = await fetch("http://localhost:3333/api/stocks", {
@@ -231,8 +206,7 @@ export function InventoryList() {
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`)
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
       await fetchData() 
@@ -247,7 +221,7 @@ export function InventoryList() {
       })
     } catch (error) {
       console.error("Failed to create inventory item:", error)
-      alert(`Failed to create inventory item: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      alert("Failed to create inventory item. Please try again.")
     }
   }
 
