@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -44,174 +43,118 @@ import {
     SheetTitle,
     SheetTrigger,
 } from '@/components/ui/sheet';
+import { Label } from '@/components/ui/label';
+import type React from 'react';
 
-// Initialize Supabase client
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
-// Stock item interface matching backend API structure
-interface StockItem {
-    id: string;
-    product_name: string;
-    product_id: string;
-    quantity: number;
-    unit_price: number;
-    supplier: string;
-    branch_id: string;
-    created_at: string;
-    updated_at: string;
-}
-
-// Mock data with backend structure
-const mockInventoryData: StockItem[] = [
+// Mock inventory data
+const inventoryData = [
     {
-        id: 'cb87d4b8-9e34-457f-9277-d56ed5985798',
-        product_name: 'Laptop Computer',
-        product_id: 'LAP001',
-        quantity: 25,
-        unit_price: 899.99,
-        supplier: 'Tech Supplier Inc',
-        branch_id: '550e8400-e29b-41d4-a716-446655440001',
-        created_at: '2025-05-27T13:39:44.435698+00:00',
-        updated_at: '2025-05-27T13:39:44.435698+00:00',
+        id: 'INV001',
+        name: 'Wireless Headphones',
+        // product code?
+        category: 'Electronics',
+        supplierName: 'TechGear Inc.',
+        supplierId: 'SUP001',
+        cost: 89.99,
+        price: 109.99,
+        quantity: 24,
+        lastUpdated: '2025-04-18 10:15:00',
+        status: 'In Stock',
+        // min stock level
+        // branch id
+        //
     },
 ];
 
+/*
+  current database inventory structure:
+  stocks: 
+  id: uuid
+  product_name: text
+  store_id: text
+  category: text
+  quantity: integer
+  ++ cost: decimal
+  unit_price: decimal
+  supplier_name: text
+  ++ supplier_id: uuid
+  minimum_stock_level: integer
+  branch_id: uuid
+  created_at: timestamp
+  updated_at: timestamp
+*/
+
 export function InventoryList() {
-    const [inventory, setInventory] = useState<StockItem[]>([]);
+    const [inventory, setInventory] = useState<typeof inventoryData>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedSuppliers, setSelectedSuppliers] = useState<string[]>([]);
+    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const [selectedStatus, setSelectedStatus] = useState<string>('');
     const [activeFilters, setActiveFilters] = useState<string[]>([]);
-    const [editItem, setEditItem] = useState<StockItem | null>(null);
+    const [editItem, setEditItem] = useState<(typeof inventoryData)[0] | null>(
+        null
+    );
     const [dialogOpen, setDialogOpen] = useState(false);
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
     const [newItem, setNewItem] = useState<
-        Omit<StockItem, 'id' | 'created_at' | 'updated_at'>
+        Omit<(typeof inventoryData)[0], 'id' | 'lastUpdated' | 'status'>
     >({
-        product_name: '',
-        product_id: '',
+        name: '',
+        category: '',
+        supplierName: '',
+        supplierId: '',
+        cost: 0,
+        price: 0,
         quantity: 0,
-        unit_price: 0,
-        supplier: '',
-        branch_id: '550e8400-e29b-41d4-a716-446655440001', // Default branch
     });
-
-    // Get authentication token
-    const getAuthToken = async () => {
-        try {
-            // Debug environment variables
-            console.log('Environment check:', {
-                hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-                hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-                hasEmail: !!process.env.NEXT_PUBLIC_SUPABASE_USER_EMAIL,
-                hasPassword: !!process.env.NEXT_PUBLIC_SUPABASE_USER_PASSWORD,
-                email: process.env.NEXT_PUBLIC_SUPABASE_USER_EMAIL,
-            });
-
-            // Check if we have required environment variables
-            if (
-                !process.env.NEXT_PUBLIC_SUPABASE_USER_EMAIL ||
-                !process.env.NEXT_PUBLIC_SUPABASE_USER_PASSWORD
-            ) {
-                console.error(
-                    'Missing environment variables for authentication'
-                );
-                throw new Error('Authentication credentials not configured');
-            }
-
-            // Sign in with credentials from .env
-            const {
-                data: { session },
-                error,
-            } = await supabase.auth.signInWithPassword({
-                email: process.env.NEXT_PUBLIC_SUPABASE_USER_EMAIL,
-                password: process.env.NEXT_PUBLIC_SUPABASE_USER_PASSWORD,
-            });
-
-            if (error) {
-                console.error('Authentication error:', error);
-                console.error('Error details:', {
-                    message: error.message,
-                    status: error.status,
-                    statusCode: error.status,
-                });
-                throw error;
-            }
-
-            if (!session?.access_token) {
-                console.error('No access token received from authentication');
-                throw new Error('Authentication failed - no access token');
-            }
-
-            console.log(
-                'Authentication successful, token length:',
-                session.access_token.length
-            );
-            return session.access_token;
-        } catch (error) {
-            console.error('Failed to get auth token:', error);
-            throw error;
-        }
-    };
 
     const fetchData = async () => {
         try {
             setLoading(true);
             const response = await fetch(
-                'http://localhost:3333/api/stocks/test?page=1&limit=50'
+                'http://localhost:3333/inventory/jira'
             );
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            const result = await response.json();
-            if (result?.data) {
-                setInventory(result.data);
+            const data = await response.json();
+            if (data) {
+                setInventory(data);
             } else {
                 console.error('Received null or undefined data from the API');
-                setInventory([]);
             }
         } catch (error) {
             console.error('Failed to fetch inventory data:', error);
-            setInventory([]);
         } finally {
             setLoading(false);
         }
     };
 
+    // Simulate API call to fetch inventory data
     useEffect(() => {
         fetchData();
     }, []);
 
-    // Filter inventory based on search term and suppliers
+    // Filter inventory based on search term, categories, and status
     const filteredInventory = inventory.filter((item) => {
         const matchesSearch =
-            item.product_name
-                .toLowerCase()
-                .includes(searchTerm.toLowerCase()) ||
-            item.product_id.toLowerCase().includes(searchTerm.toLowerCase());
+            item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            item.id.toLowerCase().includes(searchTerm.toLowerCase());
 
-        const matchesSupplier =
-            selectedSuppliers.length === 0 ||
-            selectedSuppliers.includes(item.supplier);
+        const matchesCategory =
+            selectedCategories.length === 0 ||
+            selectedCategories.includes(item.category);
 
-        return matchesSearch && matchesSupplier;
+        const matchesStatus =
+            selectedStatus === '' || item.status === selectedStatus;
+
+        return matchesSearch && matchesCategory && matchesStatus;
     });
 
-    // Get unique suppliers for filter
-    const suppliers = [...new Set(inventory.map((item) => item.supplier))];
-
-    // Determine stock status based on quantity
-    const getStockStatus = (quantity: number) => {
-        if (quantity === 0) return 'Out of Stock';
-        if (quantity < 10) return 'Low Stock';
-        return 'In Stock';
-    };
+    // Get unique categories for filter
+    const categories = [...new Set(inventory.map((item) => item.category))];
 
     // Update active filters
     useEffect(() => {
@@ -221,8 +164,8 @@ export function InventoryList() {
             filters.push(`Search: ${searchTerm}`);
         }
 
-        selectedSuppliers.forEach((supplier) => {
-            filters.push(`Supplier: ${supplier}`);
+        selectedCategories.forEach((category) => {
+            filters.push(`Category: ${category}`);
         });
 
         if (selectedStatus) {
@@ -230,12 +173,12 @@ export function InventoryList() {
         }
 
         setActiveFilters(filters);
-    }, [searchTerm, selectedSuppliers, selectedStatus]);
+    }, [searchTerm, selectedCategories, selectedStatus]);
 
     // Clear all filters
     const clearFilters = () => {
         setSearchTerm('');
-        setSelectedSuppliers([]);
+        setSelectedCategories([]);
         setSelectedStatus('');
     };
 
@@ -243,87 +186,86 @@ export function InventoryList() {
     const removeFilter = (filter: string) => {
         if (filter.startsWith('Search:')) {
             setSearchTerm('');
-        } else if (filter.startsWith('Supplier:')) {
-            const supplier = filter.split(': ')[1];
-            setSelectedSuppliers((prev) => prev.filter((s) => s !== supplier));
+        } else if (filter.startsWith('Category:')) {
+            const category = filter.split(': ')[1];
+            setSelectedCategories((prev) => prev.filter((c) => c !== category));
         } else if (filter.startsWith('Status:')) {
             setSelectedStatus('');
         }
     };
 
-    const handleCreateItem = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleCreateItem = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
-        try {
-            const token = await getAuthToken();
-            if (!token) {
-                throw new Error(
-                    'Authentication failed. Please check your credentials.'
-                );
-            }
+        // Create the new item with today's date
+        const createdItem = {
+            ...newItem,
+        };
 
-            const response = await fetch('http://localhost:3333/api/stocks', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify(newItem),
+        console.log('name ', createdItem.name);
+
+        // call the API to create the new item
+        fetch('http://localhost:3333/inventory/jira/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(createdItem),
+        })
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(() => {
+                fetchData();
+                setCreateDialogOpen(false);
+                setNewItem({
+                    name: '',
+                    category: '',
+                    price: 0,
+                    quantity: 0,
+                    supplierName: '',
+                    supplierId: '',
+                    cost: 0,
+                });
+            })
+            .catch((error) => {
+                console.error('Failed to create inventory item:', error);
             });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(
-                    `HTTP error! status: ${response.status}, message: ${errorText}`
-                );
-            }
-
-            await fetchData();
-            setCreateDialogOpen(false);
-            setNewItem({
-                product_name: '',
-                product_id: '',
-                quantity: 0,
-                unit_price: 0,
-                supplier: '',
-                branch_id: '550e8400-e29b-41d4-a716-446655440001',
-            });
-        } catch (error) {
-            console.error('Failed to create inventory item:', error);
-            alert(
-                `Failed to create inventory item: ${error instanceof Error ? error.message : 'Unknown error'}`
-            );
-        }
     };
 
     const handleSaveEdit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
+        e.preventDefault(); // Prevent default form submission behavior.
 
-        if (!editItem) return;
+        if (!editItem) return; // Exit if no item is being edited.
 
         try {
-            const token = await getAuthToken();
-            if (!token) {
-                alert('Authentication failed. Please check your credentials.');
-                return;
-            }
+            // Prepare the payload for the API request.
+            const payload = {
+                fields: {
+                    issueId: editItem.id, // Use the item's ID as the issue ID.
+                    name: editItem.name,
+                    supplierName: editItem.supplierName,
+                    supplierId: editItem.supplierId,
+                    cost: editItem.cost,
+                    price: editItem.price,
+                    quantity: editItem.quantity,
+                    // lastUpdated: new Date().toISOString(), // Use the current timestamp.
+                    category: editItem.category,
+                },
+            };
 
+            // Send a PUT request to the backend.
             const response = await fetch(
-                `http://localhost:3333/api/stocks/${editItem.id}`,
+                'http://localhost:3333/inventory/jira/edit',
                 {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
-                        Authorization: `Bearer ${token}`,
                     },
-                    body: JSON.stringify({
-                        product_name: editItem.product_name,
-                        product_id: editItem.product_id,
-                        quantity: editItem.quantity,
-                        unit_price: editItem.unit_price,
-                        supplier: editItem.supplier,
-                        branch_id: editItem.branch_id,
-                    }),
+                    body: JSON.stringify(payload),
                 }
             );
 
@@ -332,14 +274,12 @@ export function InventoryList() {
                     `Failed to update inventory item: ${response.statusText}`
                 );
             }
-
-            await fetchData();
+            await fetchData(); // Refetch the inventory data after successful update.
         } catch (error) {
             console.error('Error updating inventory item:', error);
-            alert('Failed to update inventory item. Please try again.');
         } finally {
-            setDialogOpen(false);
-            setEditItem(null);
+            setDialogOpen(false); // Close the edit dialog.
+            setEditItem(null); // Reset the `editItem` state to null.
         }
     };
 
@@ -352,30 +292,26 @@ export function InventoryList() {
         if (!itemToDelete) return;
 
         try {
-            const token = await getAuthToken();
-            if (!token) {
-                alert('Authentication failed. Please check your credentials.');
-                return;
-            }
-
+            console.log('itemId: ', itemToDelete);
             const response = await fetch(
-                `http://localhost:3333/api/stocks/${itemToDelete}`,
+                `http://localhost:3333/inventory/jira/delete`,
                 {
                     method: 'DELETE',
                     headers: {
-                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json',
                     },
+                    body: JSON.stringify({ issueId: itemToDelete }),
                 }
             );
-
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-
-            await fetchData();
+            const updatedInventory = inventory.filter(
+                (item) => item.id !== itemToDelete
+            );
+            setInventory(updatedInventory);
         } catch (error) {
             console.error('Failed to delete inventory item:', error);
-            alert('Failed to delete inventory item. Please try again.');
         } finally {
             setDeleteDialogOpen(false);
             setItemToDelete(null);
@@ -414,44 +350,44 @@ export function InventoryList() {
                             </SheetHeader>
                             <div className="grid gap-4 py-4">
                                 <div className="space-y-2">
-                                    <h4 className="font-medium">Suppliers</h4>
+                                    <h4 className="font-medium">Categories</h4>
                                     <div className="grid gap-2">
-                                        {suppliers.map((supplier) => (
+                                        {categories.map((category) => (
                                             <div
-                                                key={supplier}
+                                                key={category}
                                                 className="flex items-center space-x-2"
                                             >
                                                 <Checkbox
-                                                    id={`supplier-${supplier}`}
-                                                    checked={selectedSuppliers.includes(
-                                                        supplier
+                                                    id={`category-${category}`}
+                                                    checked={selectedCategories.includes(
+                                                        category
                                                     )}
                                                     onCheckedChange={(
                                                         checked
                                                     ) => {
                                                         if (checked) {
-                                                            setSelectedSuppliers(
+                                                            setSelectedCategories(
                                                                 [
-                                                                    ...selectedSuppliers,
-                                                                    supplier,
+                                                                    ...selectedCategories,
+                                                                    category,
                                                                 ]
                                                             );
                                                         } else {
-                                                            setSelectedSuppliers(
-                                                                selectedSuppliers.filter(
-                                                                    (s) =>
-                                                                        s !==
-                                                                        supplier
+                                                            setSelectedCategories(
+                                                                selectedCategories.filter(
+                                                                    (c) =>
+                                                                        c !==
+                                                                        category
                                                                 )
                                                             );
                                                         }
                                                     }}
                                                 />
                                                 <label
-                                                    htmlFor={`supplier-${supplier}`}
+                                                    htmlFor={`category-${category}`}
                                                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                                 >
-                                                    {supplier}
+                                                    {category}
                                                 </label>
                                             </div>
                                         ))}
@@ -549,17 +485,20 @@ export function InventoryList() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="w-[100px]">ID</TableHead>
-                                <TableHead>Product Name</TableHead>
-                                <TableHead>Product ID</TableHead>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Category</TableHead>
                                 <TableHead>Supplier</TableHead>
+                                <TableHead>Supplier ID</TableHead>
                                 <TableHead className="text-right">
-                                    Unit Price
+                                    Cost
+                                </TableHead>
+                                <TableHead className="text-right">
+                                    Price
                                 </TableHead>
                                 <TableHead className="text-right">
                                     Quantity
                                 </TableHead>
                                 <TableHead>Status</TableHead>
-                                <TableHead>Branch ID</TableHead>
                                 <TableHead>Last Updated</TableHead>
                                 <TableHead className="w-[80px]">
                                     Actions
@@ -570,7 +509,7 @@ export function InventoryList() {
                             {filteredInventory.length === 0 ? (
                                 <TableRow>
                                     <TableCell
-                                        colSpan={10}
+                                        colSpan={8}
                                         className="text-center py-8"
                                     >
                                         <div className="flex flex-col items-center justify-center gap-2">
@@ -585,15 +524,19 @@ export function InventoryList() {
                                 filteredInventory.map((item) => (
                                     <TableRow key={item.id}>
                                         <TableCell className="font-medium">
-                                            {item.id.slice(0, 8)}...
+                                            {item.id}
                                         </TableCell>
+                                        <TableCell>{item.name}</TableCell>
+                                        <TableCell>{item.category}</TableCell>
                                         <TableCell>
-                                            {item.product_name}
+                                            {item.supplierName}
                                         </TableCell>
-                                        <TableCell>{item.product_id}</TableCell>
-                                        <TableCell>{item.supplier}</TableCell>
+                                        <TableCell>{item.supplierId}</TableCell>
                                         <TableCell className="text-right">
-                                            ${item.unit_price.toFixed(2)}
+                                            ${item.cost.toFixed(2)}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            ${item.price.toFixed(2)}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             {item.quantity}
@@ -601,27 +544,19 @@ export function InventoryList() {
                                         <TableCell>
                                             <Badge
                                                 variant={
-                                                    getStockStatus(
-                                                        item.quantity
-                                                    ) === 'In Stock'
+                                                    item.status === 'In Stock'
                                                         ? 'default'
-                                                        : getStockStatus(
-                                                                item.quantity
-                                                            ) === 'Low Stock'
+                                                        : item.status ===
+                                                            'Low Stock'
                                                           ? 'secondary'
                                                           : 'destructive'
                                                 }
                                             >
-                                                {getStockStatus(item.quantity)}
+                                                {item.status}
                                             </Badge>
                                         </TableCell>
                                         <TableCell>
-                                            {item.branch_id.slice(0, 8)}...
-                                        </TableCell>
-                                        <TableCell>
-                                            {new Date(
-                                                item.updated_at
-                                            ).toLocaleDateString()}
+                                            {item.lastUpdated}
                                         </TableCell>
                                         <TableCell className="flex space-between content-center">
                                             <Button
@@ -634,7 +569,7 @@ export function InventoryList() {
                                             >
                                                 <Edit className="h-4 w-4" />
                                                 <span className="sr-only">
-                                                    Edit {item.product_name}
+                                                    Edit {item.name}
                                                 </span>
                                             </Button>
                                             <Button
@@ -646,7 +581,7 @@ export function InventoryList() {
                                             >
                                                 <Trash2 className="h-4 w-4" />
                                                 <span className="sr-only">
-                                                    Delete {item.product_name}
+                                                    Delete {item.name}
                                                 </span>
                                             </Button>
                                         </TableCell>
@@ -662,10 +597,10 @@ export function InventoryList() {
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
-                        <DialogTitle>Edit Stock Item</DialogTitle>
+                        <DialogTitle>Edit Inventory Item</DialogTitle>
                         <DialogDescription>
-                            Make changes to the stock item here. Click save when
-                            you're done.
+                            Make changes to the inventory item here. Click save
+                            when you're done.
                         </DialogDescription>
                     </DialogHeader>
                     <form
@@ -673,11 +608,13 @@ export function InventoryList() {
                             e.preventDefault();
                             if (
                                 !editItem ||
-                                !editItem.product_name ||
-                                !editItem.product_id ||
-                                !editItem.supplier ||
-                                !editItem.unit_price ||
-                                editItem.quantity < 0
+                                !editItem.name ||
+                                !editItem.category ||
+                                !editItem.supplierName ||
+                                !editItem.supplierId ||
+                                !editItem.cost ||
+                                !editItem.price
+                                // !editItem.quantity
                             ) {
                                 alert(
                                     'Please fill out all fields before saving.'
@@ -693,19 +630,18 @@ export function InventoryList() {
                                     htmlFor="item-name"
                                     className="text-right"
                                 >
-                                    Product Name
+                                    Name
                                 </Label>
                                 <Input
                                     id="item-name"
-                                    value={editItem?.product_name || ''}
+                                    value={editItem?.name || ''}
                                     className="col-span-3"
                                     onChange={(e) =>
                                         setEditItem(
                                             editItem
                                                 ? {
                                                       ...editItem,
-                                                      product_name:
-                                                          e.target.value,
+                                                      name: e.target.value,
                                                   }
                                                 : null
                                         )
@@ -715,46 +651,111 @@ export function InventoryList() {
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label
-                                    htmlFor="item-product-id"
+                                    htmlFor="item-category"
                                     className="text-right"
                                 >
-                                    Product ID
+                                    Category
                                 </Label>
-                                <Input
-                                    id="item-product-id"
-                                    value={editItem?.product_id || ''}
-                                    className="col-span-3"
-                                    onChange={(e) =>
+                                <Select
+                                    value={editItem?.category || ''}
+                                    onValueChange={(value) =>
                                         setEditItem(
                                             editItem
                                                 ? {
                                                       ...editItem,
-                                                      product_id:
-                                                          e.target.value,
+                                                      category: value,
                                                   }
                                                 : null
                                         )
                                     }
-                                    required
-                                />
+                                >
+                                    <SelectTrigger className="col-span-3">
+                                        <SelectValue placeholder="Select category" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {categories.map((category) => (
+                                            <SelectItem
+                                                key={category}
+                                                value={category}
+                                            >
+                                                {category}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label
-                                    htmlFor="item-supplier"
+                                    htmlFor="item-supplier-name"
                                     className="text-right"
                                 >
                                     Supplier
                                 </Label>
                                 <Input
-                                    id="item-supplier"
-                                    value={editItem?.supplier || ''}
+                                    id="item-supplier-name"
+                                    value={editItem?.supplierName || ''}
                                     className="col-span-3"
                                     onChange={(e) =>
                                         setEditItem(
                                             editItem
                                                 ? {
                                                       ...editItem,
-                                                      supplier: e.target.value,
+                                                      supplierName:
+                                                          e.target.value,
+                                                  }
+                                                : null
+                                        )
+                                    }
+                                    required
+                                />
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label
+                                    htmlFor="item-supplier-id"
+                                    className="text-right"
+                                >
+                                    Supplier ID
+                                </Label>
+                                <Input
+                                    id="item-supplier-id"
+                                    value={editItem?.supplierId || ''}
+                                    className="col-span-3"
+                                    onChange={(e) =>
+                                        setEditItem(
+                                            editItem
+                                                ? {
+                                                      ...editItem,
+                                                      supplierId:
+                                                          e.target.value,
+                                                  }
+                                                : null
+                                        )
+                                    }
+                                    required
+                                />
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label
+                                    htmlFor="item-cost"
+                                    className="text-right"
+                                >
+                                    Cost
+                                </Label>
+                                <Input
+                                    id="item-cost"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={editItem?.cost || ''}
+                                    className="col-span-3"
+                                    onChange={(e) =>
+                                        setEditItem(
+                                            editItem
+                                                ? {
+                                                      ...editItem,
+                                                      cost: Number.parseFloat(
+                                                          e.target.value
+                                                      ),
                                                   }
                                                 : null
                                         )
@@ -767,24 +768,23 @@ export function InventoryList() {
                                     htmlFor="item-price"
                                     className="text-right"
                                 >
-                                    Unit Price
+                                    Price
                                 </Label>
                                 <Input
                                     id="item-price"
                                     type="number"
                                     step="0.01"
                                     min="0"
-                                    value={editItem?.unit_price || ''}
+                                    value={editItem?.price || ''}
                                     className="col-span-3"
                                     onChange={(e) =>
                                         setEditItem(
                                             editItem
                                                 ? {
                                                       ...editItem,
-                                                      unit_price:
-                                                          Number.parseFloat(
-                                                              e.target.value
-                                                          ),
+                                                      price: Number.parseFloat(
+                                                          e.target.value
+                                                      ),
                                                   }
                                                 : null
                                         )
@@ -819,30 +819,6 @@ export function InventoryList() {
                                     }
                                 />
                             </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label
-                                    htmlFor="item-branch"
-                                    className="text-right"
-                                >
-                                    Branch ID
-                                </Label>
-                                <Input
-                                    id="item-branch"
-                                    value={editItem?.branch_id || ''}
-                                    className="col-span-3"
-                                    onChange={(e) =>
-                                        setEditItem(
-                                            editItem
-                                                ? {
-                                                      ...editItem,
-                                                      branch_id: e.target.value,
-                                                  }
-                                                : null
-                                        )
-                                    }
-                                    required
-                                />
-                            </div>
                         </div>
                         <DialogFooter className="flex justify-between">
                             <Button
@@ -863,20 +839,23 @@ export function InventoryList() {
             <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
-                        <DialogTitle>Create Stock Item</DialogTitle>
+                        <DialogTitle>Create Inventory Item</DialogTitle>
                         <DialogDescription>
-                            Add a new stock item. Click save when you're done.
+                            Add a new inventory item. Click save when you're
+                            done.
                         </DialogDescription>
                     </DialogHeader>
                     <form
                         onSubmit={(e) => {
                             e.preventDefault();
+                            // Error checking for required fields
                             if (
-                                !newItem.product_name ||
-                                !newItem.product_id ||
-                                !newItem.supplier ||
-                                !newItem.unit_price ||
-                                newItem.quantity < 0
+                                !newItem.name ||
+                                !newItem.category ||
+                                !newItem.supplierName ||
+                                !newItem.supplierId ||
+                                !newItem.cost ||
+                                !newItem.price
                             ) {
                                 alert(
                                     'Please fill out all required fields before creating the item.'
@@ -892,16 +871,16 @@ export function InventoryList() {
                                     htmlFor="new-item-name"
                                     className="text-right"
                                 >
-                                    Product Name
+                                    Name
                                 </Label>
                                 <Input
                                     id="new-item-name"
-                                    value={newItem.product_name}
+                                    value={newItem.name}
                                     className="col-span-3"
                                     onChange={(e) =>
                                         setNewItem({
                                             ...newItem,
-                                            product_name: e.target.value,
+                                            name: e.target.value,
                                         })
                                     }
                                     required
@@ -909,39 +888,95 @@ export function InventoryList() {
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label
-                                    htmlFor="new-item-product-id"
+                                    htmlFor="new-item-category"
                                     className="text-right"
                                 >
-                                    Product ID
+                                    Category
                                 </Label>
-                                <Input
-                                    id="new-item-product-id"
-                                    value={newItem.product_id}
-                                    className="col-span-3"
-                                    onChange={(e) =>
+                                <Select
+                                    value={newItem.category}
+                                    onValueChange={(value) =>
                                         setNewItem({
                                             ...newItem,
-                                            product_id: e.target.value,
+                                            category: value,
                                         })
                                     }
-                                    required
-                                />
+                                >
+                                    <SelectTrigger className="col-span-3">
+                                        <SelectValue placeholder="Select category" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {categories.map((category) => (
+                                            <SelectItem
+                                                key={category}
+                                                value={category}
+                                            >
+                                                {category}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label
-                                    htmlFor="new-item-supplier"
+                                    htmlFor="new-item-supplier-name"
                                     className="text-right"
                                 >
                                     Supplier
                                 </Label>
                                 <Input
-                                    id="new-item-supplier"
-                                    value={newItem.supplier}
+                                    id="new-item-supplier-name"
+                                    value={newItem.supplierName}
                                     className="col-span-3"
                                     onChange={(e) =>
                                         setNewItem({
                                             ...newItem,
-                                            supplier: e.target.value,
+                                            supplierName: e.target.value,
+                                        })
+                                    }
+                                    required
+                                />
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label
+                                    htmlFor="new-item-supplier-id"
+                                    className="text-right"
+                                >
+                                    Supplier ID
+                                </Label>
+                                <Input
+                                    id="new-item-supplier-id"
+                                    value={newItem.supplierId}
+                                    className="col-span-3"
+                                    onChange={(e) =>
+                                        setNewItem({
+                                            ...newItem,
+                                            supplierId: e.target.value,
+                                        })
+                                    }
+                                    required
+                                />
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label
+                                    htmlFor="new-item-cost"
+                                    className="text-right"
+                                >
+                                    Cost
+                                </Label>
+                                <Input
+                                    id="new-item-cost"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={newItem.cost}
+                                    className="col-span-3"
+                                    onChange={(e) =>
+                                        setNewItem({
+                                            ...newItem,
+                                            cost: Number.parseFloat(
+                                                e.target.value
+                                            ),
                                         })
                                     }
                                     required
@@ -952,19 +987,19 @@ export function InventoryList() {
                                     htmlFor="new-item-price"
                                     className="text-right"
                                 >
-                                    Unit Price
+                                    Price
                                 </Label>
                                 <Input
                                     id="new-item-price"
                                     type="number"
                                     step="0.01"
                                     min="0"
-                                    value={newItem.unit_price}
+                                    value={newItem.price}
                                     className="col-span-3"
                                     onChange={(e) =>
                                         setNewItem({
                                             ...newItem,
-                                            unit_price: Number.parseFloat(
+                                            price: Number.parseFloat(
                                                 e.target.value
                                             ),
                                         })
@@ -993,26 +1028,6 @@ export function InventoryList() {
                                             ),
                                         })
                                     }
-                                />
-                            </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label
-                                    htmlFor="new-item-branch"
-                                    className="text-right"
-                                >
-                                    Branch ID
-                                </Label>
-                                <Input
-                                    id="new-item-branch"
-                                    value={newItem.branch_id}
-                                    className="col-span-3"
-                                    onChange={(e) =>
-                                        setNewItem({
-                                            ...newItem,
-                                            branch_id: e.target.value,
-                                        })
-                                    }
-                                    required
                                 />
                             </div>
                         </div>
