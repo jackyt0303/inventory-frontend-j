@@ -3,14 +3,17 @@
 This document provides comprehensive documentation for all stock-related endpoints in the Inventory Backend API.
 
 ## 🚀 Base URL
+
 ```
 http://localhost:3333/api/stocks
 ```
 
 ## 🔐 Authentication
-All write operations (POST, PUT, PATCH, DELETE) require authentication using Supabase JWT tokens. 
+
+All write operations (POST, PUT, PATCH, DELETE) require authentication using Supabase JWT tokens.
 
 ### How to Authenticate:
+
 1. **Sign in through your Supabase client application**
 2. **Extract the JWT token from the session**
 3. **Include it in the Authorization header**
@@ -18,37 +21,42 @@ All write operations (POST, PUT, PATCH, DELETE) require authentication using Sup
 ### Example Authentication Flow:
 
 **JavaScript/TypeScript (Frontend):**
-```javascript
-import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient('your-supabase-url', 'your-supabase-anon-key')
+```javascript
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient('your-supabase-url', 'your-supabase-anon-key');
 
 // Sign in user
-const { data: { user, session }, error } = await supabase.auth.signInWithPassword({
-  email: 'user@example.com',
-  password: 'password'
-})
+const {
+    data: { user, session },
+    error,
+} = await supabase.auth.signInWithPassword({
+    email: 'user@example.com',
+    password: 'password',
+});
 
 // Use the session token for API calls
-const token = session.access_token
+const token = session.access_token;
 
 // Make authenticated API request
 const response = await fetch('http://localhost:3333/api/stocks', {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    product_id: 'ITEM001',
-    product_name: 'New Item',
-    quantity: 100,
-    unit_price: 29.99
-  })
-})
+    method: 'POST',
+    headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+        product_id: 'ITEM001',
+        product_name: 'New Item',
+        quantity: 100,
+        unit_price: 29.99,
+    }),
+});
 ```
 
 **cURL Example:**
+
 ```bash
 # First get your token from Supabase session, then:
 curl -X POST "http://localhost:3333/api/stocks" \
@@ -58,18 +66,21 @@ curl -X POST "http://localhost:3333/api/stocks" \
 ```
 
 ### Authentication Responses:
+
 - **✅ Success**: Request proceeds with user info attached
 - **❌ Missing token**: `401 {"error": "Authentication required"}`
 - **❌ Invalid token**: `401 {"error": "Invalid token"}`
 
 ## 📊 Rate Limiting
+
 - **General endpoints**: 100 requests per 15 minutes
-- **Write operations**: 30 requests per 15 minutes  
+- **Write operations**: 30 requests per 15 minutes
 - **Bulk operations**: 10 requests per hour
 
 ---
 
 ## 📋 Table of Contents
+
 1. [General Endpoints](#general-endpoints)
 2. [Analytics & Reports](#analytics--reports)
 3. [CRUD Operations](#crud-operations)
@@ -83,6 +94,7 @@ curl -X POST "http://localhost:3333/api/stocks" \
 ## 🏠 General Endpoints
 
 ### Check API Status
+
 **GET** `/`
 
 Check if the stocks API is running and Supabase connection is established.
@@ -92,11 +104,13 @@ curl -X GET "http://localhost:3333/api/stocks/"
 ```
 
 **Response:**
+
 ```
 Supabase connection is established
 ```
 
 ### Test Endpoint with Pagination
+
 **GET** `/test?page=1&limit=5`
 
 Test endpoint that returns paginated stock data.
@@ -106,29 +120,30 @@ curl -X GET "http://localhost:3333/api/stocks/test?page=1&limit=5"
 ```
 
 **Response:**
+
 ```json
 {
-  "data": [
-    {
-      "id": "cb87d4b8-9e34-457f-9277-d56ed5985798",
-      "product_name": "Laptop Computer",
-      "product_id": "LAP001",
-      "quantity": 25,
-      "unit_price": 899.99,
-      "supplier": "Tech Supplier Inc",
-      "branch_id": "550e8400-e29b-41d4-a716-446655440001",
-      "created_at": "2025-05-27T13:39:44.435698+00:00",
-      "updated_at": "2025-05-27T13:39:44.435698+00:00"
+    "data": [
+        {
+            "id": "cb87d4b8-9e34-457f-9277-d56ed5985798",
+            "product_name": "Laptop Computer",
+            "product_id": "LAP001",
+            "quantity": 25,
+            "unit_price": 899.99,
+            "supplier": "Tech Supplier Inc",
+            "branch_id": "550e8400-e29b-41d4-a716-446655440001",
+            "created_at": "2025-05-27T13:39:44.435698+00:00",
+            "updated_at": "2025-05-27T13:39:44.435698+00:00"
+        }
+    ],
+    "pagination": {
+        "page": 1,
+        "limit": 5,
+        "total": 11,
+        "totalPages": 3,
+        "hasNext": true,
+        "hasPrev": false
     }
-  ],
-  "pagination": {
-    "page": 1,
-    "limit": 5,
-    "total": 11,
-    "totalPages": 3,
-    "hasNext": true,
-    "hasPrev": false
-  }
 }
 ```
 
@@ -137,6 +152,7 @@ curl -X GET "http://localhost:3333/api/stocks/test?page=1&limit=5"
 ## 📊 Analytics & Reports
 
 ### Total Inventory Value
+
 **GET** `/total-inventory-value`
 
 Calculate the total value of all inventory items.
@@ -146,15 +162,17 @@ curl -X GET "http://localhost:3333/api/stocks/total-inventory-value"
 ```
 
 **Response:**
+
 ```json
 {
-  "total_inventory_value": 56366.61,
-  "currency": "USD",
-  "items_counted": 11
+    "total_inventory_value": 56366.61,
+    "currency": "USD",
+    "items_counted": 11
 }
 ```
 
 ### Stock Item Counts
+
 **GET** `/total-stock-item-counts`
 
 Get total quantities and product counts across all inventory.
@@ -164,20 +182,23 @@ curl -X GET "http://localhost:3333/api/stocks/total-stock-item-counts"
 ```
 
 **Response:**
+
 ```json
 {
-  "total_items": 849,
-  "unique_products": 11,
-  "average_quantity_per_product": 77.18
+    "total_items": 849,
+    "unique_products": 11,
+    "average_quantity_per_product": 77.18
 }
 ```
 
 ### Low Stock Alerts
+
 **GET** `/alerts/low-stock?threshold=20&page=1&limit=10`
 
 Get items with stock below specified threshold.
 
 **Parameters:**
+
 - `threshold` (optional): Stock level threshold (default: 10)
 - `page` (optional): Page number (default: 1)
 - `limit` (optional): Items per page (default: 50, max: 100)
@@ -187,33 +208,35 @@ curl -X GET "http://localhost:3333/api/stocks/alerts/low-stock?threshold=20&page
 ```
 
 **Response:**
+
 ```json
 {
-  "threshold": 20,
-  "low_stock_items": [
-    {
-      "id": "b1155aca-69ad-4573-b74f-737fb43a8d4d",
-      "product_name": "Filing Cabinet",
-      "product_id": "FIL001",
-      "quantity": 6,
-      "unit_price": 149.99,
-      "supplier": "Storage Solutions",
-      "branch_id": "550e8400-e29b-41d4-a716-446655440003"
+    "threshold": 20,
+    "low_stock_items": [
+        {
+            "id": "b1155aca-69ad-4573-b74f-737fb43a8d4d",
+            "product_name": "Filing Cabinet",
+            "product_id": "FIL001",
+            "quantity": 6,
+            "unit_price": 149.99,
+            "supplier": "Storage Solutions",
+            "branch_id": "550e8400-e29b-41d4-a716-446655440003"
+        }
+    ],
+    "count": 5,
+    "pagination": {
+        "page": 1,
+        "limit": 3,
+        "total": 5,
+        "totalPages": 2,
+        "hasNext": true,
+        "hasPrev": false
     }
-  ],
-  "count": 5,
-  "pagination": {
-    "page": 1,
-    "limit": 3,
-    "total": 5,
-    "totalPages": 2,
-    "hasNext": true,
-    "hasPrev": false
-  }
 }
 ```
 
 ### Comprehensive Analytics
+
 **GET** `/analytics/summary`
 
 Get comprehensive inventory analytics including supplier stats, branch breakdown, and top items.
@@ -223,6 +246,7 @@ curl -X GET "http://localhost:3333/api/stocks/analytics/summary"
 ```
 
 **Response:**
+
 ```json
 {
   "overview": {
@@ -260,25 +284,28 @@ curl -X GET "http://localhost:3333/api/stocks/analytics/summary"
 ## 🔧 CRUD Operations
 
 ### Create Stock Item
+
 **POST** `/` 🔐
 
 Create a new stock item.
 
 **Required Headers:**
+
 ```
 Authorization: Bearer your-token-here
 Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
-  "product_name": "Gaming Mouse",
-  "product_id": "MOU002",
-  "quantity": 50,
-  "unit_price": 79.99,
-  "supplier": "Gaming Gear Co",
-  "branch_id": "550e8400-e29b-41d4-a716-446655440001"
+    "product_name": "Gaming Mouse",
+    "product_id": "MOU002",
+    "quantity": 50,
+    "unit_price": 79.99,
+    "supplier": "Gaming Gear Co",
+    "branch_id": "550e8400-e29b-41d4-a716-446655440001"
 }
 ```
 
@@ -297,24 +324,26 @@ curl -X POST "http://localhost:3333/api/stocks/" \
 ```
 
 **Response:**
+
 ```json
 {
-  "message": "Stock item created successfully",
-  "data": {
-    "id": "d3670cbf-ada2-4515-9c7f-b1ee3840fb38",
-    "product_name": "Gaming Mouse",
-    "product_id": "MOU002",
-    "quantity": 50,
-    "unit_price": 79.99,
-    "supplier": "Gaming Gear Co",
-    "branch_id": "550e8400-e29b-41d4-a716-446655440001",
-    "created_at": "2025-06-04T15:15:04.67929+00:00",
-    "updated_at": "2025-06-04T15:15:04.67929+00:00"
-  }
+    "message": "Stock item created successfully",
+    "data": {
+        "id": "d3670cbf-ada2-4515-9c7f-b1ee3840fb38",
+        "product_name": "Gaming Mouse",
+        "product_id": "MOU002",
+        "quantity": 50,
+        "unit_price": 79.99,
+        "supplier": "Gaming Gear Co",
+        "branch_id": "550e8400-e29b-41d4-a716-446655440001",
+        "created_at": "2025-06-04T15:15:04.67929+00:00",
+        "updated_at": "2025-06-04T15:15:04.67929+00:00"
+    }
 }
 ```
 
 ### Get Stock Item by ID
+
 **GET** `/:id`
 
 Retrieve a specific stock item by its ID.
@@ -324,22 +353,24 @@ curl -X GET "http://localhost:3333/api/stocks/cb87d4b8-9e34-457f-9277-d56ed59857
 ```
 
 **Response:**
+
 ```json
 {
-  "id": "cb87d4b8-9e34-457f-9277-d56ed5985798",
-  "product_name": "Laptop Computer",
-  "product_id": "LAP001",
-  "quantity": 25,
-  "unit_price": 899.99,
-  "supplier": "Tech Supplier Inc",
-  "branch_id": "550e8400-e29b-41d4-a716-446655440001",
-  "created_at": "2025-05-27T13:39:44.435698+00:00",
-  "updated_at": "2025-05-27T13:39:44.435698+00:00",
-  "total_value": 22499.75
+    "id": "cb87d4b8-9e34-457f-9277-d56ed5985798",
+    "product_name": "Laptop Computer",
+    "product_id": "LAP001",
+    "quantity": 25,
+    "unit_price": 899.99,
+    "supplier": "Tech Supplier Inc",
+    "branch_id": "550e8400-e29b-41d4-a716-446655440001",
+    "created_at": "2025-05-27T13:39:44.435698+00:00",
+    "updated_at": "2025-05-27T13:39:44.435698+00:00",
+    "total_value": 22499.75
 }
 ```
 
 ### Update Stock Item
+
 **PUT** `/:id` 🔐
 
 Update an existing stock item.
@@ -355,6 +386,7 @@ curl -X PUT "http://localhost:3333/api/stocks/cb87d4b8-9e34-457f-9277-d56ed59857
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Stock item updated successfully",
@@ -368,11 +400,13 @@ curl -X PUT "http://localhost:3333/api/stocks/cb87d4b8-9e34-457f-9277-d56ed59857
 ```
 
 ### Update Stock Quantity
+
 **PATCH** `/:id/quantity` 🔐
 
 Quick quantity updates with different operations.
 
 **Operations:**
+
 - `set`: Set exact quantity
 - `add`: Add to current quantity
 - `subtract`: Subtract from current quantity
@@ -398,6 +432,7 @@ curl -X PATCH "http://localhost:3333/api/stocks/cb87d4b8-9e34-457f-9277-d56ed598
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Stock quantity updated successfully",
@@ -412,6 +447,7 @@ curl -X PATCH "http://localhost:3333/api/stocks/cb87d4b8-9e34-457f-9277-d56ed598
 ```
 
 ### Delete Stock Item
+
 **DELETE** `/:id` 🔐
 
 Delete a stock item by ID.
@@ -422,6 +458,7 @@ curl -X DELETE "http://localhost:3333/api/stocks/cb87d4b8-9e34-457f-9277-d56ed59
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Stock item deleted successfully",
@@ -438,6 +475,7 @@ curl -X DELETE "http://localhost:3333/api/stocks/cb87d4b8-9e34-457f-9277-d56ed59
 ## 🔍 Search & Filtering
 
 ### Search Products
+
 **GET** `/search/:searchTerm?page=1&limit=10`
 
 Search products by name or product ID.
@@ -447,6 +485,7 @@ curl -X GET "http://localhost:3333/api/stocks/search/laptop?page=1&limit=5"
 ```
 
 **Response:**
+
 ```json
 {
   "search_term": "laptop",
@@ -471,6 +510,7 @@ curl -X GET "http://localhost:3333/api/stocks/search/laptop?page=1&limit=5"
 ```
 
 ### Filter by Supplier
+
 **GET** `/supplier/:supplier?page=1&limit=10`
 
 Get all products from a specific supplier.
@@ -480,6 +520,7 @@ curl -X GET "http://localhost:3333/api/stocks/supplier/Tech%20Supplier%20Inc?pag
 ```
 
 **Response:**
+
 ```json
 {
   "supplier": "Tech Supplier Inc",
@@ -494,6 +535,7 @@ curl -X GET "http://localhost:3333/api/stocks/supplier/Tech%20Supplier%20Inc?pag
 ```
 
 ### Filter by Branch
+
 **GET** `/branch/:branchId?page=1&limit=10`
 
 Get all products in a specific branch.
@@ -503,6 +545,7 @@ curl -X GET "http://localhost:3333/api/stocks/branch/550e8400-e29b-41d4-a716-446
 ```
 
 **Response:**
+
 ```json
 {
   "branch_id": "550e8400-e29b-41d4-a716-446655440001",
@@ -521,6 +564,7 @@ curl -X GET "http://localhost:3333/api/stocks/branch/550e8400-e29b-41d4-a716-446
 ## 📦 Bulk Operations
 
 ### Bulk Create Items
+
 **POST** `/bulk` 🔐
 
 Create multiple stock items in a single request.
@@ -552,6 +596,7 @@ curl -X POST "http://localhost:3333/api/stocks/bulk" \
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Stock items created successfully",
@@ -572,6 +617,7 @@ curl -X POST "http://localhost:3333/api/stocks/bulk" \
 ```
 
 ### Bulk Delete by IDs
+
 **DELETE** `/bulk/by-ids` 🔐
 
 Delete multiple items by providing their IDs.
@@ -589,6 +635,7 @@ curl -X DELETE "http://localhost:3333/api/stocks/bulk/by-ids" \
 ```
 
 **Response:**
+
 ```json
 {
   "message": "Stock items deleted successfully",
@@ -598,6 +645,7 @@ curl -X DELETE "http://localhost:3333/api/stocks/bulk/by-ids" \
 ```
 
 ### Delete by Supplier (⚠️ Dangerous)
+
 **DELETE** `/supplier/:supplier?confirm=true` 🔐
 
 Delete all items from a specific supplier. **Requires confirmation**.
@@ -608,6 +656,7 @@ curl -X DELETE "http://localhost:3333/api/stocks/supplier/Old%20Supplier?confirm
 ```
 
 **Response:**
+
 ```json
 {
   "message": "All stock items from supplier 'Old Supplier' deleted successfully",
@@ -617,6 +666,7 @@ curl -X DELETE "http://localhost:3333/api/stocks/supplier/Old%20Supplier?confirm
 ```
 
 ### Upsert Operation
+
 **POST** `/upsert` 🔐
 
 Create a new item or update existing one based on `product_id`.
@@ -642,43 +692,48 @@ curl -X POST "http://localhost:3333/api/stocks/upsert" \
 ### Common Error Responses
 
 **Authentication Required (401):**
+
 ```json
 {
-  "error": "Authentication required",
-  "message": "Please provide a valid Bearer token in the Authorization header"
+    "error": "Authentication required",
+    "message": "Please provide a valid Bearer token in the Authorization header"
 }
 ```
 
 **Validation Error (400):**
+
 ```json
 {
-  "error": "Validation failed",
-  "details": [
-    "product_name is required and must be a string",
-    "quantity must be a non-negative number"
-  ]
+    "error": "Validation failed",
+    "details": [
+        "product_name is required and must be a string",
+        "quantity must be a non-negative number"
+    ]
 }
 ```
 
 **Not Found (404):**
+
 ```json
 {
-  "error": "Stock item not found"
+    "error": "Stock item not found"
 }
 ```
 
 **Rate Limit Exceeded (429):**
+
 ```json
 {
-  "error": "Too many requests from this IP",
-  "retryAfter": "15 minutes"
+    "error": "Too many requests from this IP",
+    "retryAfter": "15 minutes"
 }
 ```
 
 **Server Error (500):**
+
 ```json
 {
-  "error": "Database operation failed"
+    "error": "Database operation failed"
 }
 ```
 
@@ -687,11 +742,14 @@ curl -X POST "http://localhost:3333/api/stocks/upsert" \
 ## 📄 Response Format
 
 ### Pagination Parameters
+
 All paginated endpoints accept these query parameters:
+
 - `page`: Page number (default: 1)
 - `limit`: Items per page (default: 50, max: 100)
 
 ### Pagination Response Structure
+
 ```json
 {
   "data": [...],
@@ -707,17 +765,18 @@ All paginated endpoints accept these query parameters:
 ```
 
 ### Stock Item Structure
+
 ```json
 {
-  "id": "uuid",
-  "product_name": "string",
-  "product_id": "string", 
-  "quantity": "number",
-  "unit_price": "number",
-  "supplier": "string",
-  "branch_id": "uuid",
-  "created_at": "timestamp",
-  "updated_at": "timestamp"
+    "id": "uuid",
+    "product_name": "string",
+    "product_id": "string",
+    "quantity": "number",
+    "unit_price": "number",
+    "supplier": "string",
+    "branch_id": "uuid",
+    "created_at": "timestamp",
+    "updated_at": "timestamp"
 }
 ```
 
@@ -736,6 +795,7 @@ All paginated endpoints accept these query parameters:
 ## 📚 Common Use Cases
 
 ### 1. Inventory Dashboard
+
 ```bash
 # Get overview analytics
 curl -X GET "http://localhost:3333/api/stocks/analytics/summary"
@@ -748,6 +808,7 @@ curl -X GET "http://localhost:3333/api/stocks/total-inventory-value"
 ```
 
 ### 2. Stock Management
+
 ```bash
 # Add new stock
 curl -X POST "http://localhost:3333/api/stocks/" \
@@ -769,6 +830,7 @@ curl -X PATCH "http://localhost:3333/api/stocks/item-id/quantity" \
 ```
 
 ### 3. Reporting
+
 ```bash
 # Get supplier performance
 curl -X GET "http://localhost:3333/api/stocks/supplier/Tech%20Supplier%20Inc"
@@ -781,6 +843,7 @@ curl -X GET "http://localhost:3333/api/stocks/search/laptop"
 ```
 
 ### 4. Bulk Operations
+
 ```bash
 # Import new inventory
 curl -X POST "http://localhost:3333/api/stocks/bulk" \
@@ -811,18 +874,21 @@ For additional help or feature requests, please refer to the main API documentat
 ## ✅ Authentication Migration Complete
 
 **What Changed:**
+
 - ❌ **Removed**: Complex custom JWT/API key authentication system (440+ lines)
 - ✅ **Added**: Simple Supabase JWT token validation (~50 lines)
 - 🔄 **Updated**: All 8 protected routes now use `supabaseAuth` middleware
 - 📚 **Enhanced**: Documentation with complete authentication examples
 
 **Benefits:**
+
 - **Simplified**: No more custom JWT generation, API key hashing, or session management
 - **Secure**: Leverages Supabase's robust authentication infrastructure
 - **Maintainable**: Minimal code footprint with clear error handling
 - **Scalable**: Handles user management, password resets, social logins via Supabase
 
 **Testing Verified:**
+
 - ✅ Unprotected endpoints work without authentication
 - ✅ Protected endpoints require valid Bearer tokens
 - ✅ Invalid tokens return proper 401 errors
